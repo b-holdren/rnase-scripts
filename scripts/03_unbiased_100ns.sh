@@ -31,7 +31,6 @@ srun -n 1 bash -lc 'echo "STEP CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"; nvid
 cp ../../../equib/__CONDITION__/__SYSTEM__/npt.gro ./npt.gro
 cp ../../../equib/__CONDITION__/__SYSTEM__/npt.cpt ./npt.cpt
 
-echo "=== Stage 3: 100 ns Unbiased Production MD ==="
 srun --mpi=pmix -n 1 gmx_mpi grompp \
   -f md_100ns.mdp \
   -c npt.gro \
@@ -43,5 +42,4 @@ srun --mpi=pmix -n 1 gmx_mpi grompp \
 
 srun --mpi=pmix -n $SLURM_NTASKS gmx_mpi mdrun -deffnm unbiased_100ns -ntomp $SLURM_CPUS_PER_TASK -nb gpu -pme gpu -pin on
 
-echo "=== 100 ns Unbiased MD Complete ==="
 
