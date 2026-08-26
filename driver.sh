@@ -26,17 +26,7 @@ SLURM_CPUS="40"                         # CPU cores / threads per task
 TIME_EM="02:00:00"                      # Energy Minimization
 TIME_EQUIB="12:00:00"                   # 1 ns NPT Equilibration
 TIME_UNBIASED="96:00:00"                # 100 ns Unbiased MD
-TIME_METAD_P1="96:00:00"                # Metadynamics Part 1
-TIME_METAD_P2="96:00:00"                # Metadynamics Part 2 
-TIME_METAD_P3="96:00:00"                # Metadynamics Part 3 
-
-#Metadynamics Segments
-METAD_P1_NS="150"                       
-METAD_P2_EXTEND_NS="150"               
-METAD_P3_EXTEND_NS="100"               
-
-METAD_P2_EXTEND_PS=$((METAD_P2_EXTEND_NS * 1000))
-METAD_P3_EXTEND_PS=$((METAD_P3_EXTEND_NS * 1000))
+TIME_METAD="96:00:00"                # Metadynamics 
 
 # Paths & Directory Setup
 
@@ -126,10 +116,10 @@ cp "$BASE_DIR/unbiased/md_100ns.mdp" "$UNBIASED_DIR/md_100ns.mdp"
 sed -i "s/ref_t.*=.*/ref_t                    = $TEMP /g" "$UNBIASED_DIR/md_100ns.mdp"
 apply_config "$SCRIPTS_DIR/03_unbiased_100ns.sh" "$UNBIASED_DIR/03_unbiased_100ns.sh" "03_unbiased" "$TIME_UNBIASED"
 
-echo "[4/4] Configuring Stage 4: 400 ns Metadynamics ($METAD_DIR)..."
+echo "[4/4] Configuring Stage 4: 100 ns Metadynamics ($METAD_DIR)..."
 cp "$PREP_DIR/topol.top" "$METAD_DIR/topol.top"
-cp "$BASE_DIR/unbiased/md_150ns.mdp" "$METAD_DIR/md_150ns.mdp"
-sed -i "s/ref_t.*=.*/ref_t                    = $TEMP /g" "$METAD_DIR/md_150ns.mdp"
+cp "$BASE_DIR/unbiased/md_100ns.mdp" "$METAD_DIR/md_100ns.mdp"
+sed -i "s/ref_t.*=.*/ref_t                    = $TEMP /g" "$METAD_DIR/md_100ns.mdp"
 
 cp "$BASE_DIR/metadynamics/plumed.dat" "$METAD_DIR/plumed.dat"
 sed -i "s/TEMP=[0-9.]*/TEMP=$TEMP.0/g" "$METAD_DIR/plumed.dat"
@@ -137,9 +127,7 @@ sed -i "s/TEMP=[0-9.]*/TEMP=$TEMP.0/g" "$METAD_DIR/plumed.dat"
 cp "$BASE_DIR/metadynamics/backbone.pdb" "$METAD_DIR/backbone.pdb"
 cp "$BASE_DIR/metadynamics/RNaseA.pdb" "$METAD_DIR/RNaseA.pdb"
 
-apply_config "$SCRIPTS_DIR/04_metad_part1_150ns.sh" "$METAD_DIR/04_metad_part1_150ns.sh" "04_metad_p1" "$TIME_METAD_P1"
-apply_config "$SCRIPTS_DIR/05_metad_part2_150ns.sh" "$METAD_DIR/05_metad_part2_150ns.sh" "05_metad_p2" "$TIME_METAD_P2" "$METAD_P2_EXTEND_PS"
-apply_config "$SCRIPTS_DIR/06_metad_part3_100ns.sh" "$METAD_DIR/06_metad_part3_100ns.sh" "06_metad_p3" "$TIME_METAD_P3" "$METAD_P3_EXTEND_PS"
+apply_config "$SCRIPTS_DIR/04_metad_100ns.sh" "$METAD_DIR/04_metad_100ns.sh" "04_metad" "$TIME_METAD"
 
 if [ "$DRY_RUN" = true ]; then
     echo "Dry run complete: All files & directories successfully created"
@@ -161,17 +149,10 @@ echo "   1 ns NPT Equilibration:       Job ID: $JOB_EQUIB (queued after $JOB_EM)
 JOB_UNBIASED=$(cd "$UNBIASED_DIR" && sbatch --parsable --dependency=afterok:$JOB_EQUIB 03_unbiased_100ns.sh)
 echo "   100 ns Unbiased MD:           Job ID: $JOB_UNBIASED (queued after $JOB_EQUIB)"
 
-# # 4. Submit Metadynamics Part 1 (150 ns) (queued after NPT)
-# JOB_METAD_P1=$(cd "$METAD_DIR" && sbatch --parsable --dependency=afterok:$JOB_EQUIB 04_metad_part1_150ns.sh)
-# echo "   Metadynamics Part 1 (150 ns): Job ID: $JOB_METAD_P1 (queued after $JOB_EQUIB)"
-
-# # 5. Submit Metadynamics Part 2 (150 ns) (queued after Part 1)
-# JOB_METAD_P2=$(cd "$METAD_DIR" && sbatch --parsable --dependency=afterok:$JOB_METAD_P1 05_metad_part2_150ns.sh)
-# echo "   Metadynamics Part 2 (150 ns): Job ID: $JOB_METAD_P2 (queued after $JOB_METAD_P1)"
-
-# # 6. Submit Metadynamics Part 3 (100 ns -> 400 ns total) (queued after Part 2)
-# JOB_METAD_P3=$(cd "$METAD_DIR" && sbatch --parsable --dependency=afterok:$JOB_METAD_P2 06_metad_part3_100ns.sh)
-# echo "   Metadynamics Part 3 (100 ns): Job ID: $JOB_METAD_P3 (queued after $JOB_METAD_P2)"
+# 4. Submit Metadynamics 100 ns (queued after NPT)
+JOB_METAD=$(cd "$METAD_DIR" && sbatch --parsable --dependency=afterok:$JOB_EQUIB 04_metad_100ns.sh)
+echo "   Metadynamics (100 ns):        Job ID: $JOB_METAD (queued after $JOB_EQUIB)"
 
 echo ""
-echo "All steps successfully scheduled!"
+echo "All steps scheduled"
+
