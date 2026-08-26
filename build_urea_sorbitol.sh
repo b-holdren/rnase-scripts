@@ -12,7 +12,7 @@ if [ -z "$GMX" ]; then
         GMX="gmx_mpi"
     else
         echo "Error: GROMACS binary not found in PATH."
-        echo "Please load your environment/modules (e.g. module load gromacs/2025.1) before running."
+        echo "Please load your environment/modules before running."
         exit 1
     fi
 fi
